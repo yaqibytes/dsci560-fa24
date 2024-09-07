@@ -40,7 +40,6 @@ def get_data_directory():
     root_dir = os.path.dirname(file_dir)
     data_dir = os.path.join(root_dir, "data")
 
-   
     # Create the directory if it doesn't exist
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
@@ -64,12 +63,12 @@ def extract_table(pdf_path, csv_path):
     all_tables = []
     
     with pdfplumber.open(pdf_path) as pdf:
-        for page_num in range(2,22):  
+        for page_num in range(2, 22):  
             page = pdf.pages[page_num]
             table = page.extract_table()
             
             if table:
-                data_rows = table[3:]  # skip header rows
+                data_rows = table[3:]  # Skip header rows
 
                 # Convert the table to DataFrame
                 df = pd.DataFrame(data_rows)
@@ -100,15 +99,29 @@ def extract_table(pdf_path, csv_path):
                     "Net Migration Rate": 'first'
                 })
 
-                # Add the cleaned DataFrame to the list of all tables
                 all_tables.append(grouped_df)
 
                 print(f"Extracted table from page {page_num + 1}")
             else:
                 print(f"No table found on page {page_num + 1}")
 
+    # Combine all tables into a single DataFrame
+    if all_tables:
+        combined_df = pd.concat(all_tables, ignore_index=True)
+        
+        # Remove duplicate rows based on 'Country', keeping the first occurrence
+        combined_df = combined_df.drop_duplicates(subset="Country", keep="first")
+        
+        # Save combined data to CSV
+        combined_df.to_csv(csv_path, index=False)
+        print(f"Data saved to {csv_path}")
+    else:
+        print("No tables were found in the PDF.")
+            
+
+
 def clean_data(csv_path):
-        # Read the CSV file into a DataFrame
+    # Load the dataset
     df = pd.read_csv(csv_path)
     non_country_data = ["WORLD", 
                         "More Developed", 
@@ -117,39 +130,14 @@ def clean_data(csv_path):
                         "High Income", 
                         "Middle Income", 
                         "Upper-Middle Income", 
-                        "Lower-Middle income", 
-                        "Low Income", 
-                        "AFRICA",
-                        "NORTHERN AFRICA",
-                        "SUB-SAHARAN AFRICA",
-                        "WESTERN AFRICA",
-                        "EASTERN AFRICA",
-                        "MIDDLE AFRICA",
-                        "SOUTHERN AFRICA",
-                        "AMERICAS",
-                        "NORTHERN AMERICA",
-                        "LATIN AMERICA AND THE CARIBBEAN",
-                        "CENTRAL AMERICA",
-                        "CARIBBEAN",
-                        "SOUTH AMERICA",
-                        "ASIA",
-                        "WESTERN ASIA",
-                        "CENTRAL ASIA",
-                        "SOUTHERN ASIA",
-                        "SOUTHEAST ASIA",
-                        "EAST ASIA",
-                        "EUROPE",
-                        "EUROPEAN UNION",
-                        "NORTHERN EUROPE",
-                        "WESTERN EUROPE",
-                        "EASTERN EUROPE",
-                        "SOUTHERN EUROPE",
-                        "OCEANIA"]
+                        "Lower-Middle Income", 
+                        "Low Income",
+                        ]
 
-    # Filter out rows where 'Country' column contains non-country data
-    df_cleaned = df[~df["Country"].isin(non_country_data)]
+    # Filter out rows where 'Country' column in non-country terms list and in all uppercase
+    df_cleaned = df[~df['Country'].isin(non_country_data) & ~df['Country'].str.isupper()]
 
-    # Sort the DataFrame by 'Country' column in alphabetical order
+    # Sort by 'Country' column in alphabetical order
     df_sorted = df_cleaned.sort_values(by='Country', ascending=True)
 
     # Save the cleaned and sorted DataFrame to a new CSV file
@@ -189,7 +177,7 @@ if __name__ == "__main__":
             break
 
     data_dir = get_data_directory()
-    pdf_file_path = os.path.join(data_dir, "raw_data", "population_data.pdf")
+    pdf_file_path = os.path.join(data_dir, "raw_data", "population_report.pdf")
     csv_file_path = os.path.join(data_dir, "processed_data", "population_data.csv")
     
     # Download the PDF and save it to the specified location
