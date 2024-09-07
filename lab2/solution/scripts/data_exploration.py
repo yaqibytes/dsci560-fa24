@@ -92,7 +92,7 @@ def extract_table(pdf_path, csv_path):
                 df["Country"] = df["Country"].ffill()
 
                 # Drop rows with any None or NaN values across all columns
-                df.dropna(how='any', inplace=True)
+                # df.dropna(how='any', inplace=True)
 
                 # Add the cleaned DataFrame to the list of all tables
                 all_tables.append(df)
