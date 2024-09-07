@@ -91,34 +91,80 @@ def extract_table(pdf_path, csv_path):
                 # Forward-fill 'Country' column to propagate country names
                 df["Country"] = df["Country"].ffill()
 
-                # Drop rows with any None or NaN values across all columns
-                # df.dropna(how='any', inplace=True)
+                # Group by 'Country' and aggregate other columns
+                grouped_df = df.groupby("Country", as_index=False).agg({
+                    "Population (millions) mid-2023": 'first',
+                    "Births per 1,000 Population": 'first',
+                    "Deaths per 1,000 Population": 'first',
+                    "Rate of Natural Increase (%)": 'first',
+                    "Net Migration Rate": 'first'
+                })
 
                 # Add the cleaned DataFrame to the list of all tables
-                all_tables.append(df)
+                all_tables.append(grouped_df)
 
                 print(f"Extracted table from page {page_num + 1}")
             else:
                 print(f"No table found on page {page_num + 1}")
 
-    # Combine all tables into a single DataFrame and save as CSV
-    if all_tables:
-        combined_df = pd.concat(all_tables, ignore_index=True)
-        combined_df.reset_index(drop=True, inplace=True)
-        
-        # Save combined data to CSV
-        combined_df.to_csv(csv_path, index=False)
-        print(f"Data saved to {csv_path}")
-    else:
-        print("No tables were found in the PDF.")
+def clean_data(csv_path):
+        # Read the CSV file into a DataFrame
+    df = pd.read_csv(csv_path)
+    non_country_data = ["WORLD", 
+                        "More Developed", 
+                        "Less Developed", 
+                        "Least Developed", 
+                        "High Income", 
+                        "Middle Income", 
+                        "Upper-Middle Income", 
+                        "Lower-Middle income", 
+                        "Low Income", 
+                        "AFRICA",
+                        "NORTHERN AFRICA",
+                        "SUB-SAHARAN AFRICA",
+                        "WESTERN AFRICA",
+                        "EASTERN AFRICA",
+                        "MIDDLE AFRICA",
+                        "SOUTHERN AFRICA",
+                        "AMERICAS",
+                        "NORTHERN AMERICA",
+                        "LATIN AMERICA AND THE CARIBBEAN",
+                        "CENTRAL AMERICA",
+                        "CARIBBEAN",
+                        "SOUTH AMERICA",
+                        "ASIA",
+                        "WESTERN ASIA",
+                        "CENTRAL ASIA",
+                        "SOUTHERN ASIA",
+                        "SOUTHEAST ASIA",
+                        "EAST ASIA",
+                        "EUROPE",
+                        "EUROPEAN UNION",
+                        "NORTHERN EUROPE",
+                        "WESTERN EUROPE",
+                        "EASTERN EUROPE",
+                        "SOUTHERN EUROPE",
+                        "OCEANIA"]
+
+    # Filter out rows where 'Country' column contains non-country data
+    df_cleaned = df[~df["Country"].isin(non_country_data)]
+
+    # Sort the DataFrame by 'Country' column in alphabetical order
+    df_sorted = df_cleaned.sort_values(by='Country', ascending=True)
+
+    # Save the cleaned and sorted DataFrame to a new CSV file
+    df_sorted.to_csv(csv_path, index=False)
+
+    print(f"\nCleaned and sorted data saved to {csv_path}")
+
 
 def display_data(file_path):
     # Load the dataset
     df = pd.read_csv(file_path)
     
     print("\n##########################################################")
-    # Display a few sample records
-    print("Last few records:\n", df.tail())
+    # Display first few records
+    print("First few records:\n", df.head(10))
     
     # Calculate the size and dimensions of the dataset
     print("\nSize of the dataset (number of elements in object):", df.size)
@@ -151,6 +197,9 @@ if __name__ == "__main__":
     
     # Extract tables from all pages of the PDF, clean the data, and save as CSV
     extract_table(pdf_file_path, csv_file_path)
+
+    # Clean the data in the CSV file
+    clean_data(csv_file_path)
 
     # Display the data with basic operations
     display_data(csv_file_path)
